@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blackbody Radiation — Cavity, Curve, and the Quantum Fix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:wght@400;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c0a09;
+    --panel:#171310;
+    --panel-2:#1f1a15;
+    --line:#3a322a;
+    --paper:#efe4d3;
+    --paper-dim:#a89a86;
+    --ember:#ff7a3d;
+    --classical:#5fb8c9;
+    --visible-a: rgba(255,255,255,0.05);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--paper);
+    font-family:'Source Serif 4', Georgia, serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:38px 28px 80px;}
+
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:2.5px;
+    text-transform:uppercase;color:var(--ember);margin:0 0 10px;}
+  h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(28px,4vw,44px);
+    line-height:1.08;margin:0 0 14px;letter-spacing:-0.5px;color:var(--paper);}
+  .sub{font-size:16px;color:var(--paper-dim);max-width:640px;line-height:1.6;margin:0 0 40px;}
+  .sub b{color:var(--paper);font-weight:600;}
+
+  .stage{display:grid;grid-template-columns:300px 1fr;gap:22px;margin-bottom:26px;}
+  @media (max-width:860px){.stage{grid-template-columns:1fr;}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;}
+  .card h2{font-family:'Space Grotesk',sans-serif;font-size:12px;letter-spacing:1.6px;
+    text-transform:uppercase;color:var(--paper-dim);margin:0 0 14px;font-weight:600;}
+
+  /* --- cavity radiator hero --- */
+  .cavity-card{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;}
+  #cavityCanvas{border-radius:8px;background:#000;display:block;}
+  .cavity-caption{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--paper-dim);
+    text-align:center;margin-top:12px;line-height:1.6;}
+  .tempReadout{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:30px;margin-top:14px;
+    letter-spacing:-0.5px;}
+  .tempReadout span{font-size:15px;font-weight:500;color:var(--paper-dim);}
+  .swatchRow{display:flex;align-items:center;gap:9px;margin-top:6px;}
+  .swatch{width:16px;height:16px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);
+    box-shadow:0 0 12px 2px currentColor;}
+  .swatchLabel{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--paper-dim);}
+
+  /* --- chart --- */
+  .chart-card{position:relative;}
+  #specCanvas{width:100%;display:block;}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;font-family:'IBM Plex Mono',monospace;
+    font-size:11px;color:var(--paper-dim);}
+  .legend .dot{display:inline-block;width:18px;height:2px;vertical-align:middle;margin-right:6px;}
+
+  /* --- controls --- */
+  .controls{display:grid;grid-template-columns:1fr;gap:16px;}
+  .sliderRow{display:flex;align-items:center;gap:14px;}
+  .sliderRow label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--paper-dim);
+    min-width:64px;}
+  input[type=range]{-webkit-appearance:none;flex:1;height:4px;border-radius:2px;
+    background:linear-gradient(90deg,#7a1f10,#ff7a3d,#ffe9b0,#bcd9ff,#7fb8ff);outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;
+    border-radius:50%;background:var(--paper);border:3px solid var(--bg);cursor:pointer;
+    box-shadow:0 0 0 1px var(--line);}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--paper);
+    border:3px solid var(--bg);cursor:pointer;}
+
+  .presets{display:flex;flex-wrap:wrap;gap:8px;}
+  .presets button{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.3px;
+    background:var(--panel-2);border:1px solid var(--line);color:var(--paper);
+    padding:7px 11px;border-radius:6px;cursor:pointer;transition:border-color .15s,background .15s;}
+  .presets button:hover{border-color:var(--ember);background:#241c14;}
+
+  .toggles{display:flex;gap:22px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;font-size:11.5px;
+    color:var(--paper-dim);}
+  .toggles label{display:flex;align-items:center;gap:7px;cursor:pointer;}
+  .toggles input{accent-color:var(--ember);}
+
+  /* --- readouts --- */
+  .readouts{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:22px;}
+  @media (max-width:700px){.readouts{grid-template-columns:1fr;}}
+  .ro{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;}
+  .ro .k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:1.4px;
+    text-transform:uppercase;color:var(--paper-dim);margin-bottom:8px;}
+  .ro .v{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--paper);}
+  .ro .v small{font-size:13px;font-weight:500;color:var(--paper-dim);}
+  .ro .f{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ember);margin-top:6px;}
+
+  /* --- formula / theory panel --- */
+  .theory{margin-top:34px;display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media (max-width:860px){.theory{grid-template-columns:1fr;}}
+  .eq{font-family:'IBM Plex Mono',monospace;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:8px;padding:14px 16px;font-size:14px;color:#ffd9ad;margin:10px 0;overflow-x:auto;}
+  .theory p{font-size:14.5px;line-height:1.65;color:var(--paper-dim);margin:0 0 10px;}
+  .theory p b{color:var(--paper);}
+  .theory h3{font-family:'Space Grotesk',sans-serif;font-size:16px;margin:0 0 4px;color:var(--paper);}
+  .tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;
+    padding:2px 7px;border-radius:4px;margin-bottom:10px;text-transform:uppercase;}
+  .tag.classical{background:rgba(95,184,201,0.15);color:var(--classical);border:1px solid rgba(95,184,201,0.4);}
+  .tag.quantum{background:rgba(255,122,61,0.15);color:var(--ember);border:1px solid rgba(255,122,61,0.4);}
+
+  footer{margin-top:44px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#54493d;
+    border-top:1px solid var(--line);padding-top:16px;line-height:1.8;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Thermal &amp; Quantum Physics — Lecture Demo</p>
+  <h1>Blackbody Radiation: the curve that broke<br>classical physics</h1>
+  <p class="sub">An idealized cavity radiator absorbs and re-emits <b>all</b> wavelengths, so its spectrum
+    depends on temperature alone — not material. Both axes below are <b>fixed</b> — wavelength out
+    to 4 µm, radiance up to the maximum the slider can reach — so the curve's shifting <i>position</i>
+    and growing <i>height</i> directly show Wien's law and the T⁴ growth in total emitted energy.
+    Switch to logarithmic axes to see cool objects, down to the 2.7 K cosmic microwave background.</p>
+
+  <div class="stage">
+    <div class="card cavity-card">
+      <h2>Cavity Radiator</h2>
+      <canvas id="cavityCanvas" width="240" height="240"></canvas>
+      <div class="tempReadout" id="tempBig">5,778 <span>K</span></div>
+      <div class="swatchRow">
+        <span class="swatch" id="swatch" style="background: rgb(255, 238, 227); color: rgb(255, 238, 227);"></span>
+        <span class="swatchLabel" id="swatchLabel">apparent color ≈ rgb(255, 238, 227)</span>
+      </div>
+      <div class="cavity-caption">A small hole in an opaque, heated cavity is the<br>
+        textbook realization of an ideal blackbody.</div>
+    </div>
+
+    <div class="card chart-card">
+      <h2>Spectral Radiance — Planck vs. Classical Limit</h2>
+      <canvas id="specCanvas" width="900" height="380"></canvas>
+      <div class="legend">
+        <div><span class="dot" style="background:var(--ember);"></span>Planck's law (quantum, correct)</div>
+        <div><span class="dot" style="background:var(--classical);border-top:2px dashed var(--classical);height:0;"></span>Rayleigh–Jeans (classical limit)</div>
+        <div><span class="dot" style="background:rgba(255,255,255,0.18);"></span>visible band, 380–700 nm</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card controls">
+    <div class="sliderRow">
+      <label for="tempSlider">TEMPERATURE</label>
+      <input type="range" id="tempSlider" min="300" max="15000" step="10" value="5778">
+    </div>
+    <div class="presets">
+      <button data-t="2.7">CMB — 2.7 K</button>
+      <button data-t="1200">Lava — 1200 K</button>
+      <button data-t="2700">Incandescent bulb — 2700 K</button>
+      <button data-t="3200">Halogen lamp — 3200 K</button>
+      <button data-t="5778">Sun — 5778 K</button>
+      <button data-t="9940">Sirius A — 9940 K</button>
+      <button data-t="12100">Rigel — 12100 K</button>
+    </div>
+    <div class="toggles">
+      <label><input type="checkbox" id="toggleRJ" checked=""> show Rayleigh–Jeans (classical) curve</label>
+      <label><input type="checkbox" id="toggleYLog"> logarithmic y-axis <span style="color:#6b5f50">(reveals faint low-T curves)</span></label>
+      <label><input type="checkbox" id="toggleLog"> extend wavelength to log axis (UV → microwave, shows CMB; forces log y)</label>
+      <label><input type="checkbox" id="toggleVisible" checked=""> shade visible band</label>
+    </div>
+  </div>
+
+  <div class="readouts">
+    <div class="ro">
+      <div class="k">Peak Wavelength — Wien's Law</div>
+      <div class="v" id="roPeak">501.5 <small>nm</small>  <small style="color:#bfe0a0">(visible)</small></div>
+      <div class="f">λ_max = b / T,&nbsp; b = 2.8978 × 10⁻³ m·K</div>
+    </div>
+    <div class="ro">
+      <div class="k">Total Emitted Power — Stefan–Boltzmann</div>
+      <div class="v" id="roPower">6.32 × 10⁷ <small>W/m²</small></div>
+      <div class="f">j = σT⁴,&nbsp; σ = 5.670 × 10⁻⁸ W·m⁻²·K⁻⁴</div>
+    </div>
+    <div class="ro">
+      <div class="k">Classical Prediction at λ→0</div>
+      <div class="v" id="roCatastrophe">→ ∞</div>
+      <div class="f">the "ultraviolet catastrophe," 1900</div>
+    </div>
+  </div>
+
+  <div class="theory">
+    <div>
+      <span class="tag classical">1900 and earlier</span>
+      <h3>Why classical physics failed</h3>
+      <p>Treating the cavity's standing electromagnetic modes classically, each mode gets an average
+        energy of <b>kT</b> (equipartition). Because the number of modes per unit wavelength grows as
+        <b>1/λ⁴</b>, the predicted radiance diverges as λ → 0:</p>
+      <div class="eq">B<sub>RJ</sub>(λ,T) = 2ckT / λ⁴</div>
+      <p>Integrated over all wavelengths this predicts <b>infinite</b> emitted power from any warm
+        object — the ultraviolet catastrophe. Real ovens, filaments, and stars obviously don't do this,
+        so the model itself had to be wrong.</p>
+    </div>
+    <div>
+      <span class="tag quantum">1900, Planck</span>
+      <h3>The quantum fix</h3>
+      <p>Planck found the data fit only if a mode's energy is restricted to discrete multiples of
+        <b>hν</b>. At short wavelengths that quantum is so large compared to kT that those modes are
+        almost never excited, which suppresses the divergence:</p>
+      <div class="eq">B(λ,T) = (2hc²/λ⁵) · 1 / (e^(hc/λkT) − 1)</div>
+      <p>As λ grows, hc/λkT → 0 and this expression reduces exactly to the Rayleigh–Jeans line above —
+        the classical result was the correct <b>long-wavelength limit</b> of a deeper quantum law, not
+        a wrong theory outright.</p>
+    </div>
+  </div>
+
+  <footer>
+    Built for lecture use · Planck, Wien, and Stefan–Boltzmann constants are CODATA values ·
+    spectral radiance B<sub>λ</sub> in W·sr⁻¹·m⁻³ ·
+    apparent cavity color is an sRGB approximation to the Planckian locus, not a colorimetric rendering;
+    below ~800 K (the Draper point) the cavity emits almost nothing visible, so the opening is drawn dark
+  </footer>
+</div>
+
+<script>
+(function(){
+  // ---------- physical constants (SI) ----------
+  const h = 6.62607015e-34, c = 2.99792458e8, k = 1.380649e-23;
+  const WIEN_B = 2.897771955e-3;   // m*K
+  const SIGMA  = 5.670374419e-8;   // W/m^2/K^4
+  const SLIDER_MAX_T = 15000;      // used to size a FIXED y-axis ceiling below
+
+  function planck(lambda_m, T){ // spectral radiance B_lambda, W·sr^-1·m^-3
+    const x = (h*c)/(lambda_m*k*T);
+    if (x > 700) return 0; // avoid overflow, negligible anyway
+    return (2*h*c*c) / (Math.pow(lambda_m,5) * (Math.exp(x)-1));
+  }
+  function rayleighJeans(lambda_m, T){
+    return (2*c*k*T) / Math.pow(lambda_m,4);
+  }
+
+  // Fixed y-axis ceiling: the radiance at the Wien peak of the HOTTEST temperature
+  // the slider reaches. Every curve is drawn against this same, unchanging scale,
+  // so height differences directly show the T^4 growth in total emitted energy.
+  const FIXED_YMAX = planck(WIEN_B/SLIDER_MAX_T, SLIDER_MAX_T) * 1.12;
+  // Fixed log-scale floor: low enough that even a 300 K curve (which, within this
+  // 0-4 um window, sits ~10 orders of magnitude below the 15,000 K ceiling) is
+  // still visible. Bounds are constants — still not re-scaled per frame.
+  const FIXED_YMIN_LOG = 1e2;
+  // The extended (UV -> microwave) axis needs a much lower floor: the 2.7 K CMB
+  // peaks near 6e-4 W·sr^-1·m^-3, ~19 orders of magnitude below the ceiling.
+  const FIXED_YMIN_LOG_EXT = 1e-6;
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Tanner Helland-style approximation: Kelvin -> sRGB (visual, not colorimetric)
+  function kelvinToRGB(tempK){
+    let t = Math.max(1000, Math.min(40000, tempK)) / 100;
+    let r,g,b;
+    if (t <= 66){ r = 255; }
+    else { r = 329.698727446 * Math.pow(t-60, -0.1332047592); }
+    if (t <= 66){ g = 99.4708025861*Math.log(t) - 161.1195681661; }
+    else { g = 288.1221695283 * Math.pow(t-60, -0.0755148492); }
+    if (t >= 66){ b = 255; }
+    else if (t <= 19){ b = 0; }
+    else { b = 138.5177312231*Math.log(t-10) - 305.0447927307; }
+    const clamp = v => Math.max(0, Math.min(255, Math.round(v)));
+    return [clamp(r), clamp(g), clamp(b)];
+  }
+
+  // ---------- DOM ----------
+  const slider = document.getElementById('tempSlider');
+  const tempBig = document.getElementById('tempBig');
+  const swatch = document.getElementById('swatch');
+  const swatchLabel = document.getElementById('swatchLabel');
+  const roPeak = document.getElementById('roPeak');
+  const roPower = document.getElementById('roPower');
+  const roCatastrophe = document.getElementById('roCatastrophe');
+  const toggleRJ = document.getElementById('toggleRJ');
+  const toggleYLog = document.getElementById('toggleYLog');
+  const toggleLog = document.getElementById('toggleLog');
+  const toggleVisible = document.getElementById('toggleVisible');
+  const cavityCv = document.getElementById('cavityCanvas');
+  const specCv = document.getElementById('specCanvas');
+  const cctx = cavityCv.getContext('2d');
+  const sctx = specCv.getContext('2d');
+
+  let cavityFlicker = 0;
+  let currentT = 5778;
+
+  function fmtSci(v, digits){
+    if (v === 0) return '0';
+    const e = Math.floor(Math.log10(Math.abs(v)));
+    const m = v / Math.pow(10,e);
+    return m.toFixed(digits) + ' × 10' + toSuperscript(e);
+  }
+  function toSuperscript(n){
+    const map = {'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+    return String(n).split('').map(ch=>map[ch]!==undefined?map[ch]:ch).join('');
+  }
+
+  function drawCavity(T){
+    const w = cavityCv.width, h_ = cavityCv.height;
+    cctx.clearRect(0,0,w,h_);
+    // outer casing
+    cctx.fillStyle = '#040302';
+    cctx.beginPath(); cctx.roundRect(0,0,w,h_,14); cctx.fill();
+
+    // Visible glow fades in above the Draper point (~798 K): a 300 K cavity is dark to the eye.
+    const vis = Math.max(0, Math.min(1, (T-650)/550));
+    const [r0,g0,b0] = kelvinToRGB(T);
+    const r = Math.round(r0*vis), g = Math.round(g0*vis), b = Math.round(b0*vis);
+    const cx=w/2, cy=h_/2;
+    const intensity = Math.min(1, T/9000) * vis;
+
+    // broad, breathing halo behind the cavity opening
+    if(!reduceMotion) cavityFlicker += 0.055;
+    const pulse = 0.5 + 0.5*Math.sin(cavityFlicker*3.8);
+    const flick = 0.86 + 0.28*pulse + 0.05*Math.sin(cavityFlicker*9.1);
+    const glowR = (38 + 72*intensity) * flick;
+    const grad = cctx.createRadialGradient(cx,cy,4,cx,cy,glowR);
+    grad.addColorStop(0, `rgba(${r},${g},${b},1)`);
+    grad.addColorStop(0.35, `rgba(${r},${g},${b},${0.55*intensity+0.05})`);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    cctx.fillStyle = grad;
+    cctx.beginPath(); cctx.arc(cx,cy,glowR,0,Math.PI*2); cctx.fill();
+
+    // oven body ring (stays dark/material-independent — the point of the demo)
+    cctx.strokeStyle = '#2a231c';
+    cctx.lineWidth = 26;
+    cctx.beginPath(); cctx.arc(cx,cy,86,0,Math.PI*2); cctx.stroke();
+    cctx.strokeStyle = '#161210';
+    cctx.lineWidth = 4;
+    cctx.beginPath(); cctx.arc(cx,cy,86,0,Math.PI*2); cctx.stroke();
+    cctx.beginPath(); cctx.arc(cx,cy,73,0,Math.PI*2); cctx.stroke();
+
+    // sun-like corona: obvious rotating rays, confined to the bright central spot
+    const rayStrength = (0.35 + 0.65*intensity) * vis;
+    cctx.save();
+    cctx.translate(cx,cy);
+    cctx.globalCompositeOperation = 'screen';
+    for(let layer=0;layer<2;layer++){
+      const count = layer===0 ? 13 : 7;
+      const rotation = cavityFlicker*(layer===0 ? 0.85 : -0.58);
+      cctx.rotate(rotation);
+      for(let i=0;i<count;i++){
+        cctx.rotate(Math.PI*2/count);
+        const shimmer = 0.48 + 0.52*Math.sin(cavityFlicker*6.4+i*1.91+layer)*.5 + .26;
+        const inner = 12 + layer*2;
+        const outer = inner + (layer===0 ? 31 : 20)*shimmer*(0.7+0.3*intensity);
+        const halfW = layer===0 ? 2.8 : 1.8;
+        const rayGrad = cctx.createLinearGradient(inner,0,outer,0);
+        rayGrad.addColorStop(0,`rgba(${Math.round(255*vis)},${Math.round(248*vis)},${Math.round(205*vis)},${0.78*rayStrength})`);
+        rayGrad.addColorStop(1,`rgba(${r},${g},${b},0)`);
+        cctx.fillStyle=rayGrad;
+        cctx.beginPath();
+        cctx.moveTo(inner,-halfW); cctx.lineTo(outer,0); cctx.lineTo(inner,halfW);
+        cctx.closePath(); cctx.fill();
+      }
+      cctx.rotate(-rotation);
+    }
+    cctx.restore();
+
+    if(vis < 0.05){ // not visibly glowing: just draw the dark opening
+      cctx.fillStyle = '#0a0806';
+      cctx.beginPath(); cctx.arc(cx,cy,9,0,Math.PI*2); cctx.fill();
+      return [r0,g0,b0,vis];
+    }
+
+    // three moving glints make the motion readable even when the rays overlap
+    for(let i=0;i<3;i++){
+      const a = cavityFlicker*(1.25+i*.18) + i*Math.PI*2/3;
+      const orbit = 22 + i*5 + 3*Math.sin(cavityFlicker*4+i);
+      const gx = cx + Math.cos(a)*orbit;
+      const gy = cy + Math.sin(a)*orbit;
+      const gr = 1.5 + 1.2*(0.5+0.5*Math.sin(cavityFlicker*7+i));
+      cctx.fillStyle=`rgba(255,250,215,${(0.55+0.35*intensity)*vis})`;
+      cctx.shadowColor=`rgba(${r},${g},${b},1)`;
+      cctx.shadowBlur=10;
+      cctx.beginPath(); cctx.arc(gx,gy,gr,0,Math.PI*2); cctx.fill();
+    }
+    cctx.shadowBlur=0;
+
+    // pulsing corona ring immediately around the bright point
+    const coronaR = 17 + 5*pulse;
+    const corona = cctx.createRadialGradient(cx,cy,7,cx,cy,coronaR);
+    corona.addColorStop(0,`rgba(255,255,240,${0.95*vis})`);
+    corona.addColorStop(.32,`rgba(${r},${g},${b},0.78)`);
+    corona.addColorStop(1,`rgba(${r},${g},${b},0)`);
+    cctx.fillStyle=corona;
+    cctx.beginPath(); cctx.arc(cx,cy,coronaR,0,Math.PI*2); cctx.fill();
+
+    // the peephole itself
+    const holeR = (9 + 3*intensity) * (0.94 + 0.08*pulse);
+    cctx.fillStyle = `rgb(${r},${g},${b})`;
+    cctx.shadowColor = `rgba(${r},${g},${b},0.9)`;
+    cctx.shadowBlur = 18 + 26*intensity;
+    cctx.beginPath(); cctx.arc(cx,cy,holeR,0,Math.PI*2); cctx.fill();
+    cctx.shadowBlur = 0;
+
+    return [r0,g0,b0,vis];
+  }
+
+  // Fixed wavelength axis — does NOT depend on T, so the curve visibly moves
+  // and changes shape across a constant grid as temperature changes.
+  const LIN_LO = 1, LIN_HI = 4000;              // nm (displayed as 0-4 µm) — UV through mid-IR
+  const LOG_LO = 10, LOG_HI = 2e7;              // nm — covers UV through microwave (CMB)
+
+  function drawSpectrum(T){
+    const w = specCv.width, h_ = specCv.height;
+    const padL=64, padR=18, padT=18, padB=42;
+    sctx.clearRect(0,0,w,h_);
+
+    const [lo_nm, hi_nm] = toggleLog.checked ? [LOG_LO, LOG_HI] : [LIN_LO, LIN_HI];
+    const useLog = toggleLog.checked;
+
+    // sample Planck (and RJ, for comparison) across the fixed range
+    const N = 400;
+    let pts = [], rjpts = [];
+    let frameMax = 0;
+    for(let i=0;i<=N;i++){
+      let lam_nm;
+      if(useLog){
+        const t = i/N;
+        lam_nm = lo_nm * Math.pow(hi_nm/lo_nm, t);
+      } else {
+        lam_nm = lo_nm + (hi_nm-lo_nm)*(i/N);
+      }
+      const lam_m = lam_nm*1e-9;
+      const Bp = planck(lam_m,T);
+      pts.push([lam_nm, Bp]);
+      rjpts.push([lam_nm, rayleighJeans(lam_m,T)]);
+      if(Bp>frameMax) frameMax = Bp;
+    }
+    const ymax = FIXED_YMAX;   // fixed — not recomputed from this frame's curve
+
+    function X(lam_nm){
+      if(useLog){
+        const t = Math.log(lam_nm/lo_nm)/Math.log(hi_nm/lo_nm);
+        return padL + t*(w-padL-padR);
+      }
+      return padL + (lam_nm-lo_nm)/(hi_nm-lo_nm)*(w-padL-padR);
+    }
+    // the extended wavelength axis spans 6 decades, so it always uses a log y-axis
+    const useYLog = toggleYLog.checked || useLog;
+    const yminLog = useLog ? FIXED_YMIN_LOG_EXT : FIXED_YMIN_LOG;
+    function Y(val){
+      let t;
+      if(useYLog){
+        const v = Math.max(val, yminLog);
+        t = Math.log(v/yminLog) / Math.log(ymax/yminLog);
+      } else {
+        t = val/ymax;
+      }
+      t = Math.max(0, Math.min(1, t));   // clamp: pin at frame edge instead of drawing off-canvas
+      return (h_-padB) - t*(h_-padT-padB);
+    }
+
+    // visible band shade
+    if(toggleVisible.checked && 380>=lo_nm && 380<=hi_nm){
+      const x1 = X(Math.max(380,lo_nm)), x2 = X(Math.min(700,hi_nm));
+      sctx.fillStyle = 'rgba(255,255,255,0.05)';
+      sctx.fillRect(x1, padT, x2-x1, h_-padT-padB);
+    }
+
+    // axes
+    sctx.strokeStyle = '#3a322a'; sctx.lineWidth=1;
+    sctx.beginPath();
+    sctx.moveTo(padL,padT); sctx.lineTo(padL,h_-padB); sctx.lineTo(w-padR,h_-padB);
+    sctx.stroke();
+
+    // y gridlines + live numeric labels (scale still depends on T for linear mode's
+    // relative position — shown explicitly so it's never mistaken for auto-fit)
+    sctx.textAlign='right';
+    if(useYLog){
+      const decLo = Math.ceil(Math.log10(yminLog));
+      const decHi = Math.floor(Math.log10(ymax));
+      const step = (decHi-decLo) > 14 ? 3 : 2;
+      for(let d=decLo; d<=decHi; d+=step){
+        const y = Y(Math.pow(10,d));
+        sctx.strokeStyle='#211c17'; sctx.beginPath(); sctx.moveTo(padL,y); sctx.lineTo(w-padR,y); sctx.stroke();
+        sctx.fillStyle='#6b5f50'; sctx.fillText('10'+toSuperscript(d), padL-8, y+3);
+      }
+    } else {
+      [0.25,0.5,0.75,1.0].forEach(f=>{
+        const y = (h_-padB) - f*(h_-padT-padB);
+        sctx.strokeStyle='#211c17'; sctx.beginPath(); sctx.moveTo(padL,y); sctx.lineTo(w-padR,y); sctx.stroke();
+        sctx.fillStyle='#6b5f50'; sctx.fillText(fmtSci(ymax*f,1), padL-8, y+3);
+      });
+    }
+    sctx.textAlign='center';
+
+    // x ticks
+    sctx.fillStyle = '#a89a86'; sctx.font='11px IBM Plex Mono, monospace'; sctx.textAlign='center';
+    let xticks, tickLabel;
+    if(useLog){
+      xticks = [10,100,1000,10000,1e5,1e6,1e7];
+      tickLabel = v => v>=1e6 ? (v/1e6).toFixed(0)+'mm' : v>=1e3 ? (v/1e3).toFixed(0)+'µm' : v.toFixed(0)+'nm';
+    } else {
+      xticks = [0,500,1000,1500,2000,2500,3000,3500,4000];
+      tickLabel = v => (v/1000).toFixed(1);
+    }
+    xticks.forEach(v=>{
+      const x=X(v);
+      sctx.strokeStyle='#241f1a'; sctx.beginPath(); sctx.moveTo(x,padT); sctx.lineTo(x,h_-padB); sctx.stroke();
+      sctx.fillText(tickLabel(v), x, h_-padB+16);
+    });
+    sctx.textAlign='right';
+    sctx.fillText('wavelength'+(useLog?'  [extended, log: nm → mm]':'  (µm)  [fixed 0–4]'), w-padR, h_-6);
+    sctx.textAlign='left';
+    sctx.save();
+    sctx.translate(14, h_/2+70); sctx.rotate(-Math.PI/2);
+    sctx.fillText('Bλ  [W·sr⁻¹·m⁻³]  fixed'+(useYLog?', log':''), 0, 0);
+    sctx.restore();
+
+    // hint: curve is essentially flatlined at this scale — point at the log-y toggle
+    if(!useYLog && frameMax/ymax < 0.02){
+      sctx.fillStyle = 'rgba(255,233,176,0.85)';
+      sctx.font = '11px IBM Plex Mono, monospace';
+      sctx.textAlign = 'left';
+      sctx.fillText('↓ curve is only ' + (frameMax/ymax*100).toFixed(3) + '% of the fixed ceiling here —', padL+8, padT+18);
+      sctx.fillText('  try "logarithmic y-axis" below to see its shape', padL+8, padT+32);
+    }
+
+    // Rayleigh-Jeans (classical) dashed
+    if(toggleRJ.checked){
+      sctx.strokeStyle = 'rgba(95,184,201,0.9)';
+      sctx.setLineDash([5,4]); sctx.lineWidth=2;
+      sctx.beginPath();
+      rjpts.forEach(([lam,val],i)=>{
+        const x=X(lam), y=Y(val);
+        if(i===0) sctx.moveTo(x,y); else sctx.lineTo(x,y);
+      });
+      sctx.stroke(); sctx.setLineDash([]);
+    }
+
+    // Planck curve, filled
+    sctx.beginPath();
+    pts.forEach(([lam,val],i)=>{
+      const x=X(lam), y=Y(val);
+      if(i===0) sctx.moveTo(x,y); else sctx.lineTo(x,y);
+    });
+    const grad = sctx.createLinearGradient(0,padT,0,h_-padB);
+    grad.addColorStop(0,'rgba(255,122,61,0.35)'); grad.addColorStop(1,'rgba(255,122,61,0.02)');
+    sctx.lineTo(X(pts[pts.length-1][0]), h_-padB); sctx.lineTo(X(pts[0][0]), h_-padB); sctx.closePath();
+    sctx.fillStyle = grad; sctx.fill();
+
+    sctx.beginPath();
+    pts.forEach(([lam,val],i)=>{
+      const x=X(lam), y=Y(val);
+      if(i===0) sctx.moveTo(x,y); else sctx.lineTo(x,y);
+    });
+    sctx.strokeStyle = '#ff7a3d'; sctx.lineWidth=2.4; sctx.stroke();
+
+    // peak marker — or an off-chart indicator when Wien's peak falls outside the fixed frame
+    const peak_nm = (WIEN_B/T)*1e9;
+    if(peak_nm>=lo_nm && peak_nm<=hi_nm){
+      const px = X(peak_nm), py = Y(planck(peak_nm*1e-9,T));
+      sctx.fillStyle = '#ffe9b0';
+      sctx.beginPath(); sctx.arc(px,py,4,0,Math.PI*2); sctx.fill();
+      sctx.strokeStyle='rgba(255,233,176,0.5)'; sctx.setLineDash([3,3]);
+      sctx.beginPath(); sctx.moveTo(px,py); sctx.lineTo(px,h_-padB); sctx.stroke(); sctx.setLineDash([]);
+      sctx.fillStyle='#ffe9b0'; sctx.font='11px IBM Plex Mono, monospace'; sctx.textAlign='center';
+      sctx.fillText('λmax', px, py-10);
+    } else {
+      const atRight = peak_nm > hi_nm;
+      const ax = atRight ? w-padR-6 : padL+6;
+      const label = peak_nm>=1e6 ? (peak_nm/1e6).toFixed(2)+' mm' : peak_nm>=1e3 ? (peak_nm/1e3).toFixed(1)+' µm' : peak_nm.toFixed(0)+' nm';
+      sctx.fillStyle='#ffe9b0'; sctx.font='11px IBM Plex Mono, monospace';
+      sctx.textAlign = atRight ? 'right' : 'left';
+      sctx.fillText((atRight?'λmax → ':'← λmax ')+label+' (off chart)', ax, padT+14);
+      sctx.beginPath();
+      sctx.moveTo(ax,padT+20);
+      if(atRight){ sctx.lineTo(ax-9,padT+16); sctx.lineTo(ax-9,padT+24); }
+      else { sctx.lineTo(ax+9,padT+16); sctx.lineTo(ax+9,padT+24); }
+      sctx.closePath(); sctx.fillStyle='#ffe9b0'; sctx.fill();
+    }
+  }
+
+  function update(T){
+    T = Math.max(2.7, T);
+    currentT = T;
+    tempBig.innerHTML = (T>=1000? Math.round(T).toLocaleString() : (T<10?T.toFixed(1):Math.round(T))) + ' <span>K</span>';
+
+    const [r,g,b,vis] = drawCavity(T);
+    if(vis < 0.05){
+      swatch.style.background = '#0a0806'; swatch.style.color = 'transparent';
+      swatchLabel.textContent = 'no visible glow — emits in the infrared';
+    } else {
+      const rv=Math.round(r*vis), gv=Math.round(g*vis), bv=Math.round(b*vis);
+      swatch.style.background = `rgb(${rv},${gv},${bv})`;
+      swatch.style.color = `rgb(${rv},${gv},${bv})`;
+      swatchLabel.textContent = vis<1 ? `dull glow ≈ rgb(${rv}, ${gv}, ${bv})` : `apparent color ≈ rgb(${r}, ${g}, ${b})`;
+    }
+
+    drawSpectrum(T);
+
+    const peak_nm = (WIEN_B/T)*1e9;
+    const peakVal = peak_nm>=1e6 ? (peak_nm/1e6).toFixed(2)+' <small>mm</small>'
+                  : peak_nm>=1e4 ? (peak_nm/1e3).toFixed(1)+' <small>µm</small>'
+                  : peak_nm>=1000 ? (peak_nm/1e3).toFixed(2)+' <small>µm</small>'
+                  : peak_nm.toFixed(1)+' <small>nm</small>';
+    const band = peak_nm<380 ? '<small style="color:#8fa3ff">(UV)</small>'
+               : peak_nm<=700 ? '<small style="color:#bfe0a0">(visible)</small>'
+               : peak_nm<1e6 ? '<small style="color:#ff8f6b">(IR)</small>'
+               : '<small style="color:#5fb8c9">(microwave)</small>';
+    roPeak.innerHTML = peakVal + '  ' + band;
+
+    const power = SIGMA*Math.pow(T,4);
+    roPower.innerHTML = fmtSci(power,2) + ' <small>W/m²</small>';
+  }
+
+  slider.addEventListener('input', ()=>update(parseFloat(slider.value)));
+  // toggles redraw at the CURRENT temperature (which may be below the slider's 300 K minimum, e.g. CMB)
+  [toggleRJ, toggleYLog, toggleLog, toggleVisible].forEach(t=>t.addEventListener('change', ()=>update(currentT)));
+  document.querySelectorAll('.presets button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const T = parseFloat(btn.dataset.t);
+      slider.value = Math.min(15000, Math.max(300, T));
+      update(T);
+    });
+  });
+
+  update(5778);
+  function animateCavity(){
+    drawCavity(currentT);
+    requestAnimationFrame(animateCavity);
+  }
+  requestAnimationFrame(animateCavity);
+})();
+</script>
+
+
+</body></html>
